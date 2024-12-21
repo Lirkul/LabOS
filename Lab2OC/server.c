@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 #define PORT 8080
 #define MAX_CONNECTIONS 5
@@ -83,7 +84,14 @@ int accept_connection(int server_fd) {
         return -1;
     }
 
-    printf("New connection accepted from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+    char client_ip[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip)) == NULL) {
+        perror("inet_ntop");
+        close(client_fd);
+        return -1;
+    }
+
+    printf("New connection accepted from %s:%d\n", client_ip, ntohs(client_addr.sin_port));
 
     return client_fd;
 }
@@ -139,9 +147,10 @@ int main() {
     while (1) {
         int res = wait_for_events(server_fd, client_fd, &origMask, &read_fds, &max_fd);
         if (res < 0) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
                 handle_sighup();
                 continue;
+            }
             perror("pselect");
             break;
         }
@@ -168,7 +177,6 @@ int main() {
             }
         }
 
-        
     }
 
     cleanup(server_fd, client_fd);
