@@ -140,6 +140,7 @@ int main() {
         int res = wait_for_events(server_fd, client_fd, &origMask, &read_fds, &max_fd);
         if (res < 0) {
             if (errno == EINTR)
+                handle_sighup();
                 continue;
             perror("pselect");
             break;
@@ -167,7 +168,7 @@ int main() {
             }
         }
 
-        handle_sighup();
+        
     }
 
     cleanup(server_fd, client_fd);
